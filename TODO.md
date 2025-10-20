@@ -1,0 +1,4 @@
+- [x] Fix 500 error on /dashboard/participants by updating INSERT in addparticipant.js to include 'mobile'
+- [ ] Modify server/index.js to create participants table on startup to fix 500 error on /dashboard/participants
+- [x] Create .gitignore at root (c:/Users/anjul/Desktop/ticket_system)
+- [x] Create .gitignore in server/ directory
