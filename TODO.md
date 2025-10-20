@@ -1,6 +1,3 @@
-- [x] Update server multer fileSize limit from 5MB to 10MB in dashboard.js
-- [x] Add logging in dashboard.js upload endpoint for req.file and req.body
-- [x] Add express.urlencoded middleware in index.js
-- [x] Add client-side ticketname check in UploadTicket.tsx handleSubmit
-- [x] Fix Content-Type header in api.ts for FormData
-- [ ] Test the upload functionality
+# TODO: Update Email Body for Ticket Sending
+
+- [x] Update the email HTML body in server/routes/dashboard.js to a modern, styled version including event details: "Cyphernox - Annual IT Get Together" and describe as batch party ticket.

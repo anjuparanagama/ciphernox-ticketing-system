@@ -5,6 +5,8 @@ const nodemailer = require('nodemailer');
 const qrcode = require('qrcode');
 const multer = require('multer');
 const path = require('path');
+const sharp = require('sharp');
+const fs = require('fs');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -59,68 +61,204 @@ router.delete('/participants/:id', (req, res) => {
   });
 });
 
-// POST /dashboard/send-email/:id - Send email to participant with QR code
+// POST /dashboard/send-email/:id - Send email to participant with QR code attached to ticket
 router.post('/send-email/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
     // Fetch participant details
-    const query = 'SELECT name, email, qrcode FROM participants WHERE id = ?';
-    db.query(query, [id], async (err, results) => {
+    const participantQuery = 'SELECT name, email, qrcode FROM participants WHERE id = ?';
+    db.query(participantQuery, [id], async (err, participantResults) => {
       if (err) {
         console.error('Error fetching participant:', err);
         return res.status(500).json({ message: 'Failed to fetch participant' });
       }
 
-      if (results.length === 0) {
+      if (participantResults.length === 0) {
         return res.status(404).json({ message: 'Participant not found' });
       }
 
-      const participant = results[0];
+      const participant = participantResults[0];
 
-      // Create transporter for SMTP
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: process.env.SMTP_PORT,
-        secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      });
-
-      // Email options
-      const mailOptions = {
-        from: process.env.SMTP_FROM,
-        to: participant.email,
-        subject: 'Your Event QR Code',
-        html: `
-          <h1>Hello ${participant.name}!</h1>
-          <p>Here is your QR code for the event:</p>
-          <img src="${participant.qrcode}" alt="QR Code" />
-          <p>Please bring this QR code to the event for check-in.</p>
-        `,
-        attachments: [
-          {
-            filename: 'qrcode.png',
-            content: participant.qrcode.split(',')[1], // Remove data:image/png;base64, prefix
-            encoding: 'base64',
-          },
-        ],
-      };
-
-      // Send email
-      await transporter.sendMail(mailOptions);
-
-      // Update email_sent status
-      const updateQuery = 'UPDATE participants SET email_sent = 1 WHERE id = ?';
-      db.query(updateQuery, [id], (updateErr) => {
-        if (updateErr) {
-          console.error('Error updating email status:', updateErr);
+      // Fetch the ticket image (assuming only one ticket exists)
+      const ticketQuery = 'SELECT image FROM ticket LIMIT 1';
+      db.query(ticketQuery, async (ticketErr, ticketResults) => {
+        if (ticketErr) {
+          console.error('Error fetching ticket:', ticketErr);
+          return res.status(500).json({ message: 'Failed to fetch ticket' });
         }
-      });
 
-      res.json({ message: 'Email sent successfully' });
+        if (ticketResults.length === 0) {
+          return res.status(404).json({ message: 'No ticket design found' });
+        }
+
+        const ticketImagePath = ticketResults[0].image;
+
+        // Generate QR code buffer from base64
+        const qrCodeBuffer = Buffer.from(participant.qrcode.split(',')[1], 'base64');
+
+        // Load ticket image and QR code
+        const ticketImage = sharp(ticketImagePath);
+        const qrImage = sharp(qrCodeBuffer);
+
+        // Get ticket image metadata
+        const ticketMetadata = await ticketImage.metadata();
+
+        // Resize QR code to fit on ticket (e.g., 200x200 pixels, positioned at bottom right)
+        const qrResized = await qrImage.resize(200, 200).png().toBuffer();
+
+        // Composite QR code onto ticket image
+        const combinedImageBuffer = await ticketImage
+          .composite([{
+            input: qrResized,
+            top: ticketMetadata.height - 220, // 20px margin from bottom
+            left: ticketMetadata.width - 220, // 20px margin from right
+          }])
+          .png()
+          .toBuffer();
+
+        // Convert combined image to base64 for email
+        const combinedImageBase64 = combinedImageBuffer.toString('base64');
+
+        // Create transporter for SMTP
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: process.env.SMTP_PORT,
+          secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+          },
+        });
+
+        // Email options
+        const mailOptions = {
+          from: process.env.SMTP_FROM,
+          to: participant.email,
+          subject: 'Your Cyphernox Ticket - Annual IT Get Together',
+          html: `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Your Cyphernox Ticket</title>
+              <style>
+                body {
+                  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                  background-color: #f4f4f4;
+                  margin: 0;
+                  padding: 0;
+                  color: #333;
+                }
+                .container {
+                  max-width: 600px;
+                  margin: 0 auto;
+                  background-color: #ffffff;
+                  border-radius: 10px;
+                  overflow: hidden;
+                  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                }
+                .header {
+                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                  color: white;
+                  padding: 30px 20px;
+                  text-align: center;
+                }
+                .header h1 {
+                  margin: 0;
+                  font-size: 28px;
+                  font-weight: 700;
+                }
+                .header p {
+                  margin: 10px 0 0 0;
+                  font-size: 16px;
+                  opacity: 0.9;
+                }
+                .content {
+                  padding: 30px 20px;
+                  text-align: center;
+                }
+                .content h2 {
+                  color: #667eea;
+                  font-size: 24px;
+                  margin-bottom: 20px;
+                }
+                .content p {
+                  font-size: 16px;
+                  line-height: 1.6;
+                  margin-bottom: 20px;
+                }
+                .ticket-image {
+                  max-width: 100%;
+                  height: auto;
+                  border-radius: 8px;
+                  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                  margin: 20px 0;
+                }
+                .footer {
+                  background-color: #f8f9fa;
+                  padding: 20px;
+                  text-align: center;
+                  font-size: 14px;
+                  color: #666;
+                }
+                .highlight {
+                  background-color: #e8f4fd;
+                  padding: 15px;
+                  border-radius: 8px;
+                  margin: 20px 0;
+                  border-left: 4px solid #667eea;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h1>Cyphernox</h1>
+                  <p>Annual IT Get Together</p>
+                </div>
+                <div class="content">
+                  <h2>Hello ${participant.name}!</h2>
+                  <p>Welcome to our exciting batch party event! We're thrilled to have you join us for an unforgettable night of celebration and networking.</p>
+                  <div class="highlight">
+                    <p><strong>Your exclusive batch party ticket is attached below.</strong> This ticket grants you access to all the festivities, including special activities, great food, and amazing company.</p>
+                  </div>
+                  <img src="cid:ticket-image" alt="Your Cyphernox Ticket" class="ticket-image" />
+                  <p>Please bring this ticket to the event for check-in. Simply show the QR code on your ticket at the entrance - our team will scan it quickly and efficiently.</p>
+                  <p>We can't wait to see you there! If you have any questions, feel free to reach out.</p>
+                  <p>Best regards,<br>The Cyphernox Organizing Team</p>
+                </div>
+                <div class="footer">
+                  <p>This is an automated email. Please do not reply to this message.</p>
+                </div>
+              </div>
+            </body>
+            </html>
+          `,
+          attachments: [
+            {
+              filename: 'cyphernox-ticket.png',
+              content: combinedImageBase64,
+              encoding: 'base64',
+              cid: 'ticket-image', // Content-ID for embedding in HTML
+            },
+          ],
+        };
+
+        // Send email
+        await transporter.sendMail(mailOptions);
+
+        // Update email_sent status
+        const updateQuery = 'UPDATE participants SET email_sent = 1 WHERE id = ?';
+        db.query(updateQuery, [id], (updateErr) => {
+          if (updateErr) {
+            console.error('Error updating email status:', updateErr);
+          }
+        });
+
+        res.json({ message: 'Email sent successfully' });
+      });
     });
   } catch (error) {
     console.error('Error sending email:', error);
