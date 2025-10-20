@@ -15,6 +15,10 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Don't set Content-Type for FormData to allow automatic multipart/form-data
+    if (!(config.data instanceof FormData)) {
+      config.headers['Content-Type'] = 'application/json';
+    }
     return config;
   },
   (error) => Promise.reject(error)
@@ -80,7 +84,11 @@ export const participantAPI = {
 
 export const ticketAPI = {
   upload: async (formData: FormData) => {
-    return api.post('/dashboard/upload-pre-designed-ticket', formData);
+    return api.post('/dashboard/upload-pre-designed-ticket', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
   },
 };
 

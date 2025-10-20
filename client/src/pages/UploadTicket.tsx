@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { FiUpload, FiArrowLeft, FiImage } from 'react-icons/fi';
 
 const uploadSchema = Yup.object().shape({
-  name: Yup.string().required('Ticket name is required').min(2, 'Name must be at least 2 characters'),
+  ticketname: Yup.string().required('Ticket name is required').min(2, 'Name must be at least 2 characters'),
 });
 
 const UploadTicket = () => {
@@ -47,11 +47,16 @@ const UploadTicket = () => {
       return;
     }
 
+    if (!values.ticketname || values.ticketname.trim() === '') {
+      toast.error('Ticket name is required');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const formData = new FormData();
-      formData.append('ticket', selectedFile);
-      formData.append('name', values.name);
+      formData.append('image', selectedFile);
+      formData.append('ticketname', values.ticketname);
 
       await ticketAPI.upload(formData);
       toast.success('Ticket design uploaded successfully!');
@@ -90,7 +95,7 @@ const UploadTicket = () => {
         <CardContent>
           <Formik
             initialValues={{
-              name: '',
+              ticketname: '',
             }}
             validationSchema={uploadSchema}
             onSubmit={handleSubmit}
@@ -98,19 +103,19 @@ const UploadTicket = () => {
             {({ errors, touched }) => (
               <Form className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="flex items-center gap-2">
+                  <Label htmlFor="ticketname" className="flex items-center gap-2">
                     <FiImage size={16} />
                     Design Name
                   </Label>
                   <Field
                     as={Input}
-                    id="name"
-                    name="name"
+                    id="ticketname"
+                    name="ticketname"
                     placeholder="e.g., VIP Ticket Design"
-                    className={errors.name && touched.name ? 'border-destructive' : ''}
+                    className={errors.ticketname && touched.ticketname ? 'border-destructive' : ''}
                   />
-                  {errors.name && touched.name && (
-                    <p className="text-sm text-destructive">{String(errors.name)}</p>
+                  {errors.ticketname && touched.ticketname && (
+                    <p className="text-sm text-destructive">{String(errors.ticketname)}</p>
                   )}
                 </div>
 
