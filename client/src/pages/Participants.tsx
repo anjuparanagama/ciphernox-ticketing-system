@@ -148,6 +148,7 @@ const Participants = () => {
                     <TableHead>Mobile</TableHead>
                     <TableHead>Index No.</TableHead>
                     <TableHead>Attendance</TableHead>
+                    <TableHead>Email Sent</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -170,6 +171,22 @@ const Participants = () => {
                           ) : (
                             <span className="flex items-center gap-1">
                               <FiXCircle size={14} /> Not Attended
+                            </span>
+                          )}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={participant.emailSent ? 'default' : 'secondary'}
+                          className={participant.emailSent ? 'bg-green-500' : ''}
+                        >
+                          {participant.emailSent ? (
+                            <span className="flex items-center gap-1">
+                              <FiCheckCircle size={14} /> Sent
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1">
+                              <FiXCircle size={14} /> Not Sent
                             </span>
                           )}
                         </Badge>

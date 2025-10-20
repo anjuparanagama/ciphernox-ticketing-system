@@ -45,6 +45,7 @@ export interface Participant {
   indexNumber: string;
   qrCode?: string;
   attended?: boolean;
+  emailSent?: boolean;
   createdAt?: string;
 }
 

@@ -5,10 +5,10 @@ const qrcode = require('qrcode');
 
 // POST /addparticipant - Add a new participant
 router.post('/', async (req, res) => {
-  const { name, email, student_index } = req.body;
+  const { name, email, indexNumber, mobile } = req.body;
 
   // Basic validation
-  if (!name || !email || !student_index) {
+  if (!name || !email || !indexNumber) {
     return res.status(400).json({ message: 'All fields are required' });
   }
 
@@ -20,15 +20,15 @@ router.post('/', async (req, res) => {
 
   try {
     // Generate QR code data (e.g., participant ID or unique string)
-    const qrData = `Participant: ${name}, Index: ${student_index}, Email: ${email}`;
+    const qrData = `Participant: ${name}, Index: ${indexNumber}, Email: ${email}`;
     const qrCode = await qrcode.toDataURL(qrData);
 
     // Insert into database
     const query = `
-      INSERT INTO participants (name, student_index, email, qrcode, email_sent, attendance_status)
-      VALUES (?, ?, ?, ?, 0, 0)
+      INSERT INTO participants (name, student_index, email, mobile, qrcode, email_sent, attendance_status)
+      VALUES (?, ?, ?, ?, ?, 0, 0)
     `;
-    const values = [name, student_index, email, qrCode];
+    const values = [name, indexNumber, email, mobile, qrCode];
 
     db.query(query, values, (err, result) => {
       if (err) {
@@ -48,3 +48,4 @@ router.post('/', async (req, res) => {
 });
 
 module.exports = router;
+  

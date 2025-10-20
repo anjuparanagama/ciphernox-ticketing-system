@@ -4,7 +4,7 @@ const { db } = require('../index'); // Import db from index.js
 
 // GET /dashboard/participants - Get all participants
 router.get('/participants', (req, res) => {
-  const query = 'SELECT id, name, student_index as indexNumber, email, mobile, qrcode, attendance_status as attended FROM participants';
+  const query = 'SELECT id, name, student_index as indexNumber, email, mobile, qrcode, attendance_status as attended, email_sent as emailSent FROM participants';
 
   db.query(query, (err, results) => {
     if (err) {
