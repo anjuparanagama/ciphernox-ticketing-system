@@ -82,6 +82,7 @@ const Participants = () => {
     try {
       await participantAPI.sendEmail(id);
       toast.success('Email sent successfully');
+      fetchParticipants(); // Refresh the page data after successful email send
     } catch (error) {
       toast.error('Failed to send email');
     }

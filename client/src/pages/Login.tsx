@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Formik, Form, Field } from 'formik';
 import * as Yup from 'yup';
 import { authAPI } from '@/services/api';
-import { setToken } from '@/utils/auth';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,16 +16,15 @@ const loginSchema = Yup.object().shape({
 });
 
 const Login = () => {
-  const navigate = useNavigate();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (values: { username: string; password: string }) => {
     setIsLoading(true);
     try {
       const response: any = await authAPI.login(values);
-      setToken(response.data.token);
+      login(response.data.token);
       toast.success('Login successful!');
-      navigate('/dashboard');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Invalid credentials');
     } finally {

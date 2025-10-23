@@ -135,7 +135,7 @@ router.post('/send-email/:id', async (req, res) => {
         const mailOptions = {
           from: process.env.SMTP_FROM,
           to: participant.email,
-          subject: 'Your Cyphernox Ticket - Annual IT Get Together',
+          subject: 'Your Ciphernox Ticket - Annual IT Get Together',
           html: `
             <!DOCTYPE html>
             <html lang="en">
@@ -215,7 +215,7 @@ router.post('/send-email/:id', async (req, res) => {
             <body>
               <div class="container">
                 <div class="header">
-                  <h1>Cyphernox</h1>
+                  <h1>Ciphernox - 2025</h1>
                   <p>Annual IT Get Together</p>
                 </div>
                 <div class="content">
