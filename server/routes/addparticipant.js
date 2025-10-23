@@ -21,29 +21,38 @@ router.post('/', async (req, res) => {
   try {
     // Generate QR code data (e.g., participant ID or unique string)
     const qrData = `Participant: ${name}, Index: ${indexNumber}, Email: ${email}`;
-    const qrCode = await qrcode.toDataURL(qrData);
+    qrcode.toDataURL(qrData).then(qrCode => {
+      // Insert into database
+      const insertQuery = `
+        INSERT INTO participants (name, student_index, email, mobile, qrcode, email_sent, attendance_status)
+        VALUES (?, ?, ?, ?, ?, 0, 0)
+      `;
+      const values = [name, indexNumber, email, mobile, qrCode];
 
-    // Insert into database
-    const query = `
-      INSERT INTO participants (name, student_index, email, mobile, qrcode, email_sent, attendance_status)
-      VALUES (?, ?, ?, ?, ?, 0, 0)
-    `;
-    const values = [name, indexNumber, email, mobile, qrCode];
-
-    db.query(query, values, (err, result) => {
-      if (err) {
-        console.error('Error inserting participant:', err);
-        if (err.code === 'ER_DUP_ENTRY') {
-          return res.status(409).json({ message: 'Participant with this email or student index already exists' });
+      db.query(insertQuery, values, (err, result) => {
+        if (err) {
+          if (err.code === 'ER_DUP_ENTRY') {
+            if (err.sqlMessage.includes('student_index')) {
+              return res.status(409).json({ message: 'Participant with this student index already exists' });
+            } else if (err.sqlMessage.includes('email')) {
+              return res.status(409).json({ message: 'Participant with this email already exists' });
+            } else {
+              return res.status(409).json({ message: 'Duplicate entry detected' });
+            }
+          }
+          console.error('Error inserting participant:', err);
+          return res.status(500).json({ message: 'Failed to add participant' });
         }
-        return res.status(500).json({ message: 'Failed to add participant' });
-      }
-      res.status(201).json({ message: 'Participant added successfully', id: result.insertId, qrCode });
+        res.status(201).json({ message: 'Participant added successfully', id: result.insertId, qrCode });
+      });
+    }).catch(error => {
+      console.error('Error generating QR code:', error);
+      res.status(500).json({ message: 'Failed to generate QR code' });
     });
 
   } catch (error) {
-    console.error('Error generating QR code:', error);
-    res.status(500).json({ message: 'Failed to generate QR code' });
+    console.error('Unexpected error:', error);
+    res.status(500).json({ message: 'An unexpected error occurred' });
   }
 });
 
