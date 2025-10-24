@@ -266,27 +266,100 @@ router.post('/send-email/:id', async (req, res) => {
   }
 });
 
-// POST /dashboard/mark-attendance - Mark attendance using QR code
+// POST /dashboard/mark-attendance - Mark attendance using QR code and get user details
 router.post('/mark-attendance', (req, res) => {
-  const { qrCode } = req.body;
+  console.log('Received body:', req.body);
 
-  if (!qrCode) {
-    return res.status(400).json({ message: 'QR code is required' });
+  // Get the scanned data from qrCode property since that's what the scanner is sending
+  const qrContent = req.body.qrCode;
+
+  if (!qrContent) {
+    return res.status(400).json({ 
+      message: 'QR code scan data is missing. Please try scanning again.',
+      receivedData: req.body, // This will help in debugging
+      tip: 'Make sure your QR scanner is sending the data properly.'
+    });
   }
 
-  // Assuming qrCode is the data encoded in QR, but for simplicity, treat as participant ID or search by qrcode
-  // Here, we'll assume qrCode is the participant ID for now
-  const query = 'UPDATE participants SET attendance_status = 1 WHERE id = ?';
+  // Parse the QR data format: "Participant: name, Index: indexNumber, Email: email"
+  console.log('QR Content to parse:', qrContent); // Log the content we're trying to parse
+  
+  let email;
+  try {
+    const emailMatch = qrContent.match(/Email: ([^,]+)$/);
+    email = emailMatch ? emailMatch[1].trim() : null;
+    console.log('Extracted email:', email); // Log the extracted email
+  } catch (error) {
+    console.error('Error parsing QR content:', error);
+    return res.status(400).json({ 
+      message: 'Error parsing QR code data',
+      receivedContent: qrContent
+    });
+  }
 
-  db.query(query, [qrCode], (err, result) => {
-    if (err) {
-      console.error('Error marking attendance:', err);
-      return res.status(500).json({ message: 'Failed to mark attendance' });
+  if (!email) {
+    return res.status(400).json({ 
+      message: 'Invalid QR code format. Expected format: "Participant: name, Index: number, Email: email"',
+      receivedContent: qrContent
+    });
+  }
+
+  // First, check if attendance is already marked using email
+  const checkAttendanceQuery = 'SELECT id, attendance_status FROM participants WHERE email = ?';
+  
+  db.query(checkAttendanceQuery, [email], (checkErr, checkResult) => {
+    if (checkErr) {
+      console.error('Error checking attendance status:', checkErr);
+      return res.status(500).json({ message: 'Failed to check attendance status' });
     }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Participant not found' });
+
+    if (checkResult.length === 0) {
+      return res.status(404).json({ message: 'Invalid QR code or participant not found' });
     }
-    res.json({ message: 'Attendance marked successfully' });
+
+    if (checkResult[0].attendance_status === 1) {
+      return res.status(400).json({ message: 'Attendance already marked for this participant' });
+    }
+
+    const participantId = checkResult[0].id;
+
+    // Get participant details and mark attendance
+    const getParticipantQuery = 'SELECT id, name, student_index, email FROM participants WHERE id = ?';
+    
+    db.query(getParticipantQuery, [participantId], (err, participants) => {
+      if (err) {
+        console.error('Error fetching participant:', err);
+        return res.status(500).json({ message: 'Failed to fetch participant details' });
+      }
+
+      if (participants.length === 0) {
+        return res.status(404).json({ message: 'Participant not found' });
+      }
+
+      const participant = participants[0];
+
+      // Now update attendance status
+      const updateQuery = 'UPDATE participants SET attendance_status = 1 WHERE id = ?';
+
+      db.query(updateQuery, [participantId], (updateErr, result) => {
+        if (updateErr) {
+          console.error('Error marking attendance:', updateErr);
+          return res.status(500).json({ message: 'Failed to mark attendance' });
+        }
+
+        // Return participant details along with success message
+        res.json({
+          message: 'Attendance marked successfully',
+          participant: {
+            id: participant.id,
+            name: participant.name,
+            studentIndex: participant.student_index,
+            email: participant.email
+          },
+          success: true
+        });
+      });
+    });
   });
 });
 

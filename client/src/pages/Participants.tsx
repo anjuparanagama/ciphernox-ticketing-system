@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { participantAPI, Participant } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,10 +46,20 @@ const Participants = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [qrModalData, setQrModalData] = useState<Participant | null>(null);
+  const location = useLocation();
 
   useEffect(() => {
     fetchParticipants();
   }, []);
+
+  // Refresh when navigated from QR Scanner with refresh state
+  useEffect(() => {
+    if (location.state?.refresh) {
+      fetchParticipants();
+      // Clear the state so future navigations don't trigger refresh
+      navigate('/participants', { replace: true });
+    }
+  }, [location.state]);
 
   const fetchParticipants = async () => {
     setIsLoading(true);

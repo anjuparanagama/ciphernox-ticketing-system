@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { FiArrowLeft, FiCheckCircle, FiCamera, FiCameraOff } from 'react-icons/fi';
 import QrReader from 'react-qr-scanner';
+import AttendancePopup from '@/components/AttendancePopup';
 
 const QRScanner = () => {
   const navigate = useNavigate();
@@ -27,9 +28,16 @@ const QRScanner = () => {
     setIsScanning(true);
     try {
       const response: any = await participantAPI.markAttendance(codeToUse);
-      setScannedData(response.data);
-      toast.success('Attendance marked successfully!');
+      // Set scanned data directly from the response
+      const participantData = response.data.participant;
+      setScannedData(participantData);
       setQrCode('');
+      
+      // Navigate back to participants page after showing success message
+      setTimeout(() => {
+        setScannedData(null);
+        navigate('/participants', { state: { refresh: true } });
+      }, 2500); // 2.5 seconds to ensure popup has time to animate out
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to mark attendance');
       setScannedData(null);
@@ -78,6 +86,13 @@ const QRScanner = () => {
           <p className="text-muted-foreground mt-1">Scan participant QR codes for attendance</p>
         </div>
       </div>
+
+      {scannedData && (
+        <AttendancePopup
+          participant={scannedData}
+          onClose={() => setScannedData(null)}
+        />
+      )}
 
       <Card className="shadow-lg">
         <CardHeader>

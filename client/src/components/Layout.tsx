@@ -83,7 +83,7 @@ const Layout = ({ children }: LayoutProps) => {
             <Button
               onClick={handleLogout}
               variant="outline"
-              className="w-full flex items-center gap-2 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10"
+              className="w-full flex items-center gap-2 bg-blue-400 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10"
             >
               <FiLogOut size={18} />
               Logout
