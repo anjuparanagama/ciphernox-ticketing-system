@@ -4,6 +4,8 @@ const mysql = require("mysql2");
 const cors = require("cors");
 const path = require("path");
 const multer = require("multer");
+const http = require('http');
+const WebSocket = require('ws');
 
 const app = express();
 const port = 5000;
@@ -47,6 +49,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/public', express.static(path.join(__dirname, 'public')));
 
 // Routes
 const addParticipantRoute = require('./routes/addparticipant');
@@ -63,6 +66,27 @@ app.get("/", (req, res) => {
 });
 
 
-app.listen(port, () => {
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
+// WebSocket connection handling
+wss.on('connection', (ws) => {
+  console.log('New WebSocket client connected');
+
+  ws.on('close', () => {
+    console.log('Client disconnected');
+  });
+});
+
+// Broadcast attendance updates to all connected clients
+global.broadcastAttendance = (data) => {
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify(data));
+    }
+  });
+};
+
+server.listen(port, () => {
   console.log(`🚀 Server running at http://localhost:${port}`);
 });

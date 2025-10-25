@@ -324,7 +324,7 @@ router.post('/mark-attendance', (req, res) => {
     const participantId = checkResult[0].id;
 
     // Get participant details and mark attendance
-    const getParticipantQuery = 'SELECT id, name, student_index, email FROM participants WHERE id = ?';
+    const getParticipantQuery = 'SELECT id, name, student_index, email, profile_image FROM participants WHERE id = ?';
     
     db.query(getParticipantQuery, [participantId], (err, participants) => {
       if (err) {
@@ -348,16 +348,25 @@ router.post('/mark-attendance', (req, res) => {
         }
 
         // Return participant details along with success message
-        res.json({
+        const attendanceData = {
           message: 'Attendance marked successfully',
           participant: {
             id: participant.id,
             name: participant.name,
             studentIndex: participant.student_index,
-            email: participant.email
+            email: participant.email,
+            profile_image: participant.profile_image ? `http://localhost:5000${participant.profile_image}` : null
           },
-          success: true
-        });
+          success: true,
+          timestamp: new Date().toISOString()
+        };
+
+        // Broadcast the attendance update to all connected clients
+        if (global.broadcastAttendance) {
+          global.broadcastAttendance(attendanceData);
+        }
+
+        res.json(attendanceData);
       });
     });
   });
