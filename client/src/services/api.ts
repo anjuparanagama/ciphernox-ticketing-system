@@ -65,8 +65,9 @@ export const participantAPI = {
     return api.get('/dashboard/participants');
   },
 
-  create: async (participant: Omit<Participant, 'id' | 'qrCode' | 'attended' | 'createdAt'>) => {
-    return api.post('/add-participant', participant);
+  create: async (data: FormData | Omit<Participant, 'id' | 'qrCode' | 'attended' | 'createdAt'>) => {
+    const config = data instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {};
+    return api.post('/add-participant', data, config);
   },
 
   delete: async (id: string) => {

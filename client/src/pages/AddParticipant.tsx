@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { FiUser, FiMail, FiPhone, FiHash, FiArrowLeft } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiHash, FiArrowLeft, FiImage } from 'react-icons/fi';
 
 const participantSchema = Yup.object().shape({
   name: Yup.string().required('Name is required').min(2, 'Name must be at least 2 characters'),
@@ -26,7 +26,16 @@ const AddParticipant = () => {
   const handleSubmit = async (values: any, { resetForm }: any) => {
     setIsLoading(true);
     try {
-      await participantAPI.create(values);
+      const formData = new FormData();
+      formData.append('name', values.name);
+      formData.append('email', values.email);
+      formData.append('mobile', values.mobile);
+      formData.append('indexNumber', values.indexNumber);
+      if (values.profile_image) {
+        formData.append('profile_image', values.profile_image);
+      }
+
+      await participantAPI.create(formData);
       toast.success('Participant added successfully!');
       resetForm();
     } catch (error: any) {
@@ -67,11 +76,12 @@ const AddParticipant = () => {
               email: '',
               mobile: '',
               indexNumber: '',
+              profile_image: null,
             }}
             validationSchema={participantSchema}
             onSubmit={handleSubmit}
           >
-            {({ errors, touched }) => (
+            {({ errors, touched, setFieldValue }) => (
               <Form className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name" className="flex items-center gap-2">
@@ -140,6 +150,25 @@ const AddParticipant = () => {
                   {errors.indexNumber && touched.indexNumber && (
                     <p className="text-sm text-destructive">{String(errors.indexNumber)}</p>
                   )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="profile_image" className="flex items-center gap-2">
+                    <FiImage size={16} />
+                    Profile Image (Optional)
+                  </Label>
+                  <input
+                    type="file"
+                    id="profile_image"
+                    accept="image/*"
+                    onChange={(event) => {
+                      const file = event.currentTarget.files?.[0];
+                      if (file) {
+                        setFieldValue('profile_image', file);
+                      }
+                    }}
+                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                  />
                 </div>
 
                 <div className="flex gap-3 pt-4">

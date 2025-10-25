@@ -50,6 +50,14 @@ const Participants = () => {
 
   useEffect(() => {
     fetchParticipants();
+
+    // Set up auto-refresh every 5 seconds
+    const intervalId = setInterval(() => {
+      fetchParticipants();
+    }, 5000); // 5 seconds
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   // Refresh when navigated from QR Scanner with refresh state
